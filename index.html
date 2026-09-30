@@ -1,0 +1,1587 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Central de Iluminação IoT</title>
+
+    <!-- MQTT Paho -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+
+
+    <style>
+
+        /* =====================================================
+           CONFIGURAÇÃO GERAL
+        ====================================================== */
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+
+        body {
+
+            min-height: 100vh;
+
+            font-family:
+                "Segoe UI",
+                Arial,
+                sans-serif;
+
+            /* FUNDO ESCURO */
+            background: linear-gradient(
+                135deg,
+                #172033,
+                #24344d
+            );
+
+            color: #1e293b;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            padding: 20px;
+
+        }
+
+
+        /* =====================================================
+           CONTAINER PRINCIPAL
+        ====================================================== */
+
+        .dashboard {
+
+            width: 100%;
+
+            max-width: 760px;
+
+            background: #ffffff;
+
+            border-radius: 18px;
+
+            box-shadow:
+                0 20px 50px
+                rgba(0, 0, 0, 0.30);
+
+            overflow: hidden;
+
+        }
+
+
+        /* =====================================================
+           CABEÇALHO
+        ====================================================== */
+
+        .header {
+
+            padding: 24px 28px;
+
+            background: #2563eb;
+
+            color: white;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: space-between;
+
+            gap: 20px;
+
+        }
+
+
+        .header h1 {
+
+            font-size: 21px;
+
+            font-weight: 700;
+
+        }
+
+
+        .header p {
+
+            margin-top: 4px;
+
+            font-size: 13px;
+
+            opacity: 0.85;
+
+        }
+
+
+        /* =====================================================
+           STATUS
+        ====================================================== */
+
+        .status {
+
+            display: flex;
+
+            align-items: center;
+
+            gap: 8px;
+
+            background: rgba(255, 255, 255, 0.15);
+
+            padding: 8px 12px;
+
+            border-radius: 20px;
+
+            font-size: 12px;
+
+            font-weight: 600;
+
+            white-space: nowrap;
+
+        }
+
+
+        .status-dot {
+
+            width: 8px;
+
+            height: 8px;
+
+            border-radius: 50%;
+
+            background: #facc15;
+
+        }
+
+
+        .status-online .status-dot {
+
+            background: #22c55e;
+
+            box-shadow:
+                0 0 0 4px
+                rgba(34, 197, 94, 0.15);
+
+        }
+
+
+        .status-offline .status-dot {
+
+            background: #ef4444;
+
+            box-shadow:
+                0 0 0 4px
+                rgba(239, 68, 68, 0.15);
+
+        }
+
+
+        /* =====================================================
+           CONTEÚDO
+        ====================================================== */
+
+        .content {
+
+            padding: 28px;
+
+        }
+
+
+        /* =====================================================
+           TÓPICO MQTT
+        ====================================================== */
+
+        .topic-section {
+
+            margin-bottom: 25px;
+
+        }
+
+
+        .topic-label {
+
+            display: block;
+
+            margin-bottom: 8px;
+
+            color: #475569;
+
+            font-size: 12px;
+
+            font-weight: 700;
+
+        }
+
+
+        .topic-input {
+
+            width: 100%;
+
+            padding: 12px 14px;
+
+            border: 1px solid #cbd5e1;
+
+            border-radius: 9px;
+
+            background: #f8fafc;
+
+            color: #334155;
+
+            font-family: monospace;
+
+            font-size: 13px;
+
+            outline: none;
+
+        }
+
+
+        .topic-input:focus {
+
+            border-color: #3b82f6;
+
+            box-shadow:
+                0 0 0 3px
+                rgba(59, 130, 246, 0.10);
+
+        }
+
+
+        /* =====================================================
+           ÁREA PRINCIPAL
+        ====================================================== */
+
+        .main-area {
+
+            display: grid;
+
+            grid-template-columns: 1fr 1fr;
+
+            gap: 20px;
+
+        }
+
+
+        /* =====================================================
+           PAINEL DO DISPOSITIVO
+        ====================================================== */
+
+        .device-panel {
+
+            background: #f8fafc;
+
+            border: 1px solid #e2e8f0;
+
+            border-radius: 14px;
+
+            padding: 28px;
+
+            text-align: center;
+
+        }
+
+
+        .device-title {
+
+            color: #64748b;
+
+            font-size: 12px;
+
+            font-weight: 700;
+
+            text-transform: uppercase;
+
+            margin-bottom: 20px;
+
+        }
+
+
+        /* =====================================================
+           LED
+        ====================================================== */
+
+        .led-area {
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            height: 190px;
+
+        }
+
+
+        .led {
+
+            width: 125px;
+
+            height: 125px;
+
+            border-radius: 50%;
+
+            background: #cbd5e1;
+
+            border: 8px solid #e2e8f0;
+
+            box-shadow:
+                inset 0 4px 10px
+                rgba(0, 0, 0, 0.10);
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            padding: 20px;
+
+            transition: 0.3s ease;
+
+        }
+
+
+        .led-text {
+
+            color: #64748b;
+
+            font-size: 11px;
+
+            font-weight: 700;
+
+            text-transform: uppercase;
+
+        }
+
+
+        /* =====================================================
+           LED LIGADO
+        ====================================================== */
+
+        .led.active {
+
+            background: #38bdf8;
+
+            border-color: #bae6fd;
+
+            box-shadow:
+
+                0 0 0 8px
+                rgba(56, 189, 248, 0.12),
+
+                0 0 30px
+                rgba(14, 165, 233, 0.55);
+
+            transform: scale(1.04);
+
+        }
+
+
+        .led.active .led-text {
+
+            color: white;
+
+        }
+
+
+        /* =====================================================
+           PAINEL DE CONTROLE
+        ====================================================== */
+
+        .control-panel {
+
+            border: 1px solid #e2e8f0;
+
+            border-radius: 14px;
+
+            padding: 28px;
+
+        }
+
+
+        .control-panel h2 {
+
+            color: #1e3a8a;
+
+            font-size: 18px;
+
+            margin-bottom: 6px;
+
+        }
+
+
+        .control-description {
+
+            color: #64748b;
+
+            font-size: 12px;
+
+            line-height: 1.5;
+
+            margin-bottom: 22px;
+
+        }
+
+
+        /* =====================================================
+           BOTÕES
+        ====================================================== */
+
+        .buttons {
+
+            display: grid;
+
+            gap: 12px;
+
+        }
+
+
+        button {
+
+            width: 100%;
+
+            border: none;
+
+            border-radius: 9px;
+
+            padding: 14px;
+
+            color: white;
+
+            font-size: 13px;
+
+            font-weight: 700;
+
+            cursor: pointer;
+
+            transition: 0.2s ease;
+
+        }
+
+
+        button:disabled {
+
+            opacity: 0.45;
+
+            cursor: not-allowed;
+
+        }
+
+
+        button:not(:disabled):hover {
+
+            transform: translateY(-1px);
+
+        }
+
+
+        button:not(:disabled):active {
+
+            transform: scale(0.98);
+
+        }
+
+
+        /* BOTÃO LIGAR */
+
+        .btn-on {
+
+            background: #16a34a;
+
+        }
+
+
+        .btn-on:hover:not(:disabled) {
+
+            background: #15803d;
+
+        }
+
+
+        /* BOTÃO DESLIGAR */
+
+        .btn-off {
+
+            background: #dc2626;
+
+        }
+
+
+        .btn-off:hover:not(:disabled) {
+
+            background: #b91c1c;
+
+        }
+
+
+        /* =====================================================
+           INFORMAÇÕES
+        ====================================================== */
+
+        .information {
+
+            margin-top: 20px;
+
+            display: grid;
+
+            grid-template-columns:
+                repeat(3, 1fr);
+
+            gap: 10px;
+
+        }
+
+
+        .info {
+
+            background: #f8fafc;
+
+            border: 1px solid #e2e8f0;
+
+            border-radius: 10px;
+
+            padding: 13px;
+
+        }
+
+
+        .info-title {
+
+            color: #94a3b8;
+
+            font-size: 10px;
+
+            font-weight: 700;
+
+            text-transform: uppercase;
+
+        }
+
+
+        .info-value {
+
+            margin-top: 5px;
+
+            color: #334155;
+
+            font-size: 12px;
+
+            font-weight: 600;
+
+            overflow: hidden;
+
+            text-overflow: ellipsis;
+
+            white-space: nowrap;
+
+        }
+
+
+        /* =====================================================
+           ÚLTIMA MENSAGEM
+        ====================================================== */
+
+        .message {
+
+            margin-top: 15px;
+
+            padding: 12px;
+
+            background: #eff6ff;
+
+            border: 1px solid #dbeafe;
+
+            border-radius: 9px;
+
+            text-align: center;
+
+            color: #1d4ed8;
+
+            font-size: 12px;
+
+            font-weight: 600;
+
+        }
+
+
+        /* =====================================================
+           RODAPÉ
+        ====================================================== */
+
+        .footer {
+
+            margin-top: 20px;
+
+            text-align: center;
+
+            color: #94a3b8;
+
+            font-size: 10px;
+
+        }
+
+
+        /* =====================================================
+           RESPONSIVO
+        ====================================================== */
+
+        @media (max-width: 650px) {
+
+            .header {
+
+                align-items: flex-start;
+
+                flex-direction: column;
+
+            }
+
+
+            .status {
+
+                width: 100%;
+
+                justify-content: center;
+
+            }
+
+
+            .main-area {
+
+                grid-template-columns: 1fr;
+
+            }
+
+
+            .information {
+
+                grid-template-columns: 1fr;
+
+            }
+
+        }
+
+
+        @media (max-width: 400px) {
+
+            .content {
+
+                padding: 20px;
+
+            }
+
+
+            .header {
+
+                padding: 20px;
+
+            }
+
+
+            .device-panel,
+            .control-panel {
+
+                padding: 20px;
+
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+    <main class="dashboard">
+
+
+        <!-- =================================================
+             CABEÇALHO
+        ================================================== -->
+
+        <header class="header">
+
+            <div>
+
+                <h1>
+                    Central de Iluminação IoT
+                </h1>
+
+                <p>
+                    Controle da porta 13 do Arduino
+                </p>
+
+            </div>
+
+
+            <div
+                id="status"
+                class="status"
+            >
+
+                <span class="status-dot"></span>
+
+                <span id="statusText">
+                    Sincronizando...
+                </span>
+
+            </div>
+
+        </header>
+
+
+        <section class="content">
+
+
+            <!-- =================================================
+                 TÓPICO MQTT
+            ================================================== -->
+
+            <div class="topic-section">
+
+                <label
+                    class="topic-label"
+                    for="topicInput"
+                >
+
+                    Tópico MQTT
+
+                </label>
+
+
+                <input
+                    id="topicInput"
+                    class="topic-input"
+                    type="text"
+                    value="gerry_sanchez_led_exclusivo/arduino"
+                    autocomplete="off"
+                    spellcheck="false"
+                >
+
+            </div>
+
+
+            <!-- =================================================
+                 ÁREA PRINCIPAL
+            ================================================== -->
+
+            <div class="main-area">
+
+
+                <!-- =================================================
+                     DISPOSITIVO
+                ================================================== -->
+
+                <section class="device-panel">
+
+
+                    <div class="device-title">
+
+                        Estado da porta 13
+
+                    </div>
+
+
+                    <div class="led-area">
+
+
+                        <div
+                            id="led"
+                            class="led"
+                        >
+
+                            <span
+                                id="ledText"
+                                class="led-text"
+                            >
+
+                                Desligado
+
+                            </span>
+
+                        </div>
+
+
+                    </div>
+
+
+                </section>
+
+
+                <!-- =================================================
+                     CONTROLE
+                ================================================== -->
+
+                <section class="control-panel">
+
+
+                    <h2>
+                        Controle
+                    </h2>
+
+
+                    <p class="control-description">
+
+                        Envie um comando para o Arduino
+                        através do protocolo MQTT.
+
+                    </p>
+
+
+                    <div class="buttons">
+
+
+                        <button
+                            id="btnOn"
+                            class="btn-on"
+                            disabled
+                        >
+
+                            LIGAR
+
+                        </button>
+
+
+                        <button
+                            id="btnOff"
+                            class="btn-off"
+                            disabled
+                        >
+
+                            DESLIGAR
+
+                        </button>
+
+
+                    </div>
+
+
+                    <div class="message">
+
+                        Última mensagem:
+
+                        <span id="lastMessage">
+                            Aguardando
+                        </span>
+
+                    </div>
+
+
+                </section>
+
+
+            </div>
+
+
+            <!-- =================================================
+                 INFORMAÇÕES
+            ================================================== -->
+
+            <div class="information">
+
+
+                <div class="info">
+
+                    <div class="info-title">
+                        Broker
+                    </div>
+
+                    <div class="info-value">
+                        broker.hivemq.com
+                    </div>
+
+                </div>
+
+
+                <div class="info">
+
+                    <div class="info-title">
+                        Conexão
+                    </div>
+
+                    <div class="info-value">
+                        WebSocket SSL
+                    </div>
+
+                </div>
+
+
+                <div class="info">
+
+                    <div class="info-title">
+                        Porta
+                    </div>
+
+                    <div class="info-value">
+                        Arduino D13
+                    </div>
+
+                </div>
+
+
+            </div>
+
+
+            <footer class="footer">
+
+                MQTT • HiveMQ • Arduino • IoT
+
+            </footer>
+
+
+        </section>
+
+    </main>
+
+
+    <!-- =====================================================
+         JAVASCRIPT
+    ====================================================== -->
+
+    <script>
+
+
+        /* =====================================================
+           CONFIGURAÇÃO MQTT
+        ====================================================== */
+
+        const MQTT_HOST =
+            "broker.hivemq.com";
+
+
+        const MQTT_PORT =
+            8884;
+
+
+        let currentTopic =
+            "gerry_sanchez_led_exclusivo/arduino";
+
+
+        /* =====================================================
+           CLIENT ID
+        ====================================================== */
+
+        const clientId =
+
+            "arduino_dashboard_" +
+
+            Math.random()
+                .toString(16)
+                .substring(2, 10) +
+
+            "_" +
+
+            Date.now();
+
+
+        /* =====================================================
+           ELEMENTOS DA PÁGINA
+        ====================================================== */
+
+        const status =
+            document.getElementById(
+                "status"
+            );
+
+
+        const statusText =
+            document.getElementById(
+                "statusText"
+            );
+
+
+        const topicInput =
+            document.getElementById(
+                "topicInput"
+            );
+
+
+        const led =
+            document.getElementById(
+                "led"
+            );
+
+
+        const ledText =
+            document.getElementById(
+                "ledText"
+            );
+
+
+        const btnOn =
+            document.getElementById(
+                "btnOn"
+            );
+
+
+        const btnOff =
+            document.getElementById(
+                "btnOff"
+            );
+
+
+        const lastMessage =
+            document.getElementById(
+                "lastMessage"
+            );
+
+
+        /* =====================================================
+           CLIENTE PAHO MQTT
+        ====================================================== */
+
+        const client =
+
+            new Paho.MQTT.Client(
+
+                MQTT_HOST,
+
+                MQTT_PORT,
+
+                "/mqtt",
+
+                clientId
+
+            );
+
+
+        /* =====================================================
+           ALTERAR STATUS
+        ====================================================== */
+
+        function setStatus(
+            type,
+            text
+        ) {
+
+            status.className =
+                "status";
+
+
+            if (
+                type === "online"
+            ) {
+
+                status.classList.add(
+                    "status-online"
+                );
+
+            }
+
+
+            if (
+                type === "offline"
+            ) {
+
+                status.classList.add(
+                    "status-offline"
+                );
+
+            }
+
+
+            statusText.textContent =
+                text;
+
+        }
+
+
+        /* =====================================================
+           CONEXÃO PERDIDA
+        ====================================================== */
+
+        client.onConnectionLost =
+
+            function (
+                responseObject
+            ) {
+
+
+                btnOn.disabled = true;
+
+                btnOff.disabled = true;
+
+
+                setStatus(
+                    "offline",
+                    "Sistema Offline"
+                );
+
+
+                if (
+                    responseObject.errorCode !== 0
+                ) {
+
+                    console.log(
+
+                        "Conexão perdida:",
+                        responseObject.errorMessage
+
+                    );
+
+                }
+
+            };
+
+
+        /* =====================================================
+           MENSAGEM RECEBIDA
+           
+           IMPORTANTE:
+           O LED SÓ MUDA AQUI.
+        ====================================================== */
+
+        client.onMessageArrived =
+
+            function (
+                message
+            ) {
+
+
+                const received =
+
+                    message
+                        .payloadString
+                        .trim();
+
+
+                console.log(
+                    "Mensagem recebida:",
+                    received
+                );
+
+
+                lastMessage.textContent =
+                    received;
+
+
+                /* =================================================
+                   RECEBEU 1
+                ================================================== */
+
+                if (
+                    received === "1"
+                ) {
+
+
+                    led.classList.add(
+                        "active"
+                    );
+
+
+                    ledText.textContent =
+                        "Ligado";
+
+                }
+
+
+                /* =================================================
+                   RECEBEU 0
+                ================================================== */
+
+                else if (
+                    received === "0"
+                ) {
+
+
+                    led.classList.remove(
+                        "active"
+                    );
+
+
+                    ledText.textContent =
+                        "Desligado";
+
+                }
+
+            };
+
+
+        /* =====================================================
+           CONECTAR AO HIVEMQ
+        ====================================================== */
+
+        function connectMQTT() {
+
+
+            setStatus(
+                "sync",
+                "Conectando..."
+            );
+
+
+            client.connect({
+
+                useSSL: true,
+
+                timeout: 10,
+
+
+                /* =================================================
+                   CONEXÃO BEM-SUCEDIDA
+                ================================================== */
+
+                onSuccess:
+                    function () {
+
+
+                        console.log(
+                            "Conectado ao HiveMQ"
+                        );
+
+
+                        setStatus(
+                            "online",
+                            "Sistema Online"
+                        );
+
+
+                        btnOn.disabled =
+                            false;
+
+
+                        btnOff.disabled =
+                            false;
+
+
+                        /* ASSINAR TÓPICO */
+
+                        client.subscribe(
+
+                            currentTopic,
+
+                            {
+                                qos: 0
+                            }
+
+                        );
+
+
+                        console.log(
+
+                            "Inscrito em:",
+                            currentTopic
+
+                        );
+
+                    },
+
+
+                /* =================================================
+                   ERRO DE CONEXÃO
+                ================================================== */
+
+                onFailure:
+                    function (
+                        error
+                    ) {
+
+
+                        console.error(
+                            "Erro MQTT:",
+                            error
+                        );
+
+
+                        setStatus(
+                            "offline",
+                            "Falha na conexão"
+                        );
+
+
+                        btnOn.disabled =
+                            true;
+
+
+                        btnOff.disabled =
+                            true;
+
+                    }
+
+            });
+
+        }
+
+
+        /* =====================================================
+           PUBLICAR COMANDO
+        ====================================================== */
+
+        function publishCommand(
+            value
+        ) {
+
+
+            /*
+             * Verificar conexão
+             */
+
+            if (
+                !client.isConnected()
+            ) {
+
+                console.warn(
+                    "MQTT desconectado"
+                );
+
+                return;
+
+            }
+
+
+            /*
+             * Criar mensagem
+             */
+
+            const message =
+
+                new Paho.MQTT.Message(
+                    String(value)
+                );
+
+
+            /*
+             * Definir tópico
+             */
+
+            message.destinationName =
+                currentTopic;
+
+
+            /*
+             * QoS
+             */
+
+            message.qos = 0;
+
+
+            /*
+             * Não reter
+             */
+
+            message.retained = false;
+
+
+            /*
+             * Enviar mensagem
+             */
+
+            client.send(message);
+
+
+            console.log(
+                "Comando enviado:",
+                value
+            );
+
+
+            /*
+             * NÃO ALTERAMOS O LED AQUI.
+             *
+             * O LED só será alterado quando
+             * uma mensagem for recebida pelo
+             * broker através de onMessageArrived.
+             */
+
+        }
+
+
+        /* =====================================================
+           BOTÃO LIGAR
+        ====================================================== */
+
+        btnOn.addEventListener(
+
+            "click",
+
+            function () {
+
+                publishCommand("1");
+
+            }
+
+        );
+
+
+        /* =====================================================
+           BOTÃO DESLIGAR
+        ====================================================== */
+
+        btnOff.addEventListener(
+
+            "click",
+
+            function () {
+
+                publishCommand("0");
+
+            }
+
+        );
+
+
+        /* =====================================================
+           ALTERAR TÓPICO MQTT
+        ====================================================== */
+
+        topicInput.addEventListener(
+
+            "change",
+
+            function () {
+
+
+                const newTopic =
+
+                    topicInput
+                        .value
+                        .trim();
+
+
+                /*
+                 * Não permitir tópico vazio
+                 */
+
+                if (
+                    newTopic === ""
+                ) {
+
+                    topicInput.value =
+                        currentTopic;
+
+                    return;
+
+                }
+
+
+                /*
+                 * Se estiver desconectado,
+                 * apenas salvar o novo tópico.
+                 */
+
+                if (
+                    !client.isConnected()
+                ) {
+
+                    currentTopic =
+                        newTopic;
+
+                    return;
+
+                }
+
+
+                const oldTopic =
+                    currentTopic;
+
+
+                currentTopic =
+                    newTopic;
+
+
+                /*
+                 * Cancelar inscrição
+                 * do tópico antigo.
+                 */
+
+                client.unsubscribe(
+
+                    oldTopic,
+
+                    {
+
+                        onSuccess:
+                            function () {
+
+
+                                console.log(
+
+                                    "Tópico antigo removido:",
+                                    oldTopic
+
+                                );
+
+
+                                /*
+                                 * Assinar o novo tópico.
+                                 */
+
+                                client.subscribe(
+
+                                    currentTopic,
+
+                                    {
+
+                                        qos: 0,
+
+
+                                        onSuccess:
+                                            function () {
+
+
+                                                console.log(
+
+                                                    "Novo tópico:",
+                                                    currentTopic
+
+                                                );
+
+                                            }
+
+                                    }
+
+                                );
+
+                            },
+
+
+                        onFailure:
+                            function (
+                                error
+                            ) {
+
+
+                                console.error(
+
+                                    "Erro ao mudar tópico:",
+                                    error
+
+                                );
+
+                            }
+
+                    }
+
+                );
+
+            }
+
+        );
+
+
+        /* =====================================================
+           INICIAR SISTEMA
+        ====================================================== */
+
+        connectMQTT();
+
+
+    </script>
+
+
+</body>
+
+</html>
